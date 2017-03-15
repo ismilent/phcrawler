@@ -11,6 +11,7 @@ from PyQt4.QtCore import SIGNAL
 from PyQt4.QtCore import QUrl
 from PyQt4.QtCore import QObject
 from PyQt4.QtCore import QIODevice
+from PyQt4.QtCore import QCoreApplication
 from PyQt4.Qt import QApplication
 from PyQt4.QtWebKit import QWebView
 from PyQt4.QtWebKit import QWebPage
@@ -20,6 +21,7 @@ from PyQt4.QtWebKit import QWebElement
 from PyQt4.QtNetwork import QNetworkAccessManager
 from PyQt4.QtNetwork import QNetworkRequest
 from PyQt4.QtNetwork import QNetworkReply
+from PyQt4.QtCore import QTimer
 
 from const import METHOD_OPERATION
 from const import HANDLE_TAGS
@@ -77,17 +79,18 @@ class NetworkAccessManager(QNetworkAccessManager):
         if data:
             request_data['data'] = str(data.readAll())
 
-        pprint(request_data)
+        #pprint(request_data)
         return QNetworkAccessManager.createRequest(self, operation, request, data)
 
     def finished(self, reply):
-        print 'finished'
+        print 'NetworkAccessManager finished'
 
 
-class Crawler(QApplication):
+class Crawler(QObject):
     '''
     Crawler Class
     '''
+
     def __init__(self, url, cookie=None, auth=None, post_data=None, timeout=None):
         '''
         Crawler class
@@ -97,7 +100,8 @@ class Crawler(QApplication):
         :param post_data: post data
         :param timeout: timeout
         '''
-        QApplication.__init__(self, sys.argv)
+        #QApplication.__init__(self, sys.argv)
+        QObject.__init__(self)
         self.url = url
         self.web_view = QWebView()
         self.web_page = WebPage()
@@ -122,6 +126,11 @@ class Crawler(QApplication):
         # load url
         self.web_page.currentFrame().load(QUrl(url))
 
+        # connect quit signal
+        #self.connect(self, SIGNAL('quitApp()'), self._quit)
+
+    def _quit(self):
+        print 'quitApp SIGNAL receive'
 
     def handle_tag(self, tag, src):
         '''
@@ -132,7 +141,7 @@ class Crawler(QApplication):
         '''
         for element in self.document.findAll(tag):
             if element.hasAttribute(src):
-                print element.attribute(src)
+                link = element.attribute(src)
 
     def load(self, url):
         '''
@@ -146,13 +155,21 @@ class Crawler(QApplication):
     def loadFinished(self, ok):
         self.document =  self.web_frame.documentElement()
         map(lambda x: self.handle_tag(x[0], x[1]), HANDLE_TAGS.items())
-        print 'loadfinished'
+        print 'WebPage load finished'
+        print 'instance', QApplication.instance()
+        print 'Core', QCoreApplication.instance()
+        QApplication.instance().exit(0)
+
+
+class Application(QApplication):
+    def __init__(self):
+        QApplication.__init__(self)
 
 
 if __name__ == '__main__':
     #url = 'http://localhost:8000/aisec.html'
+    app = QApplication(sys.argv)
     url = 'http://demo.aisec.cn/demo/aisec/'
     crawler = Crawler(url)
-    crawler.exec_()
-    crawler.quit()
-    sys.exit()
+    print 'main', app
+    sys.exit(app.exec_())

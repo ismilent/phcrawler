@@ -4,4 +4,3 @@
 from selenium import webdriver
 
 phantomjs = webdriver.PhantomJS()
-phantomjs.
